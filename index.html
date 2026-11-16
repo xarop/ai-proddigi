@@ -15,6 +15,22 @@
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      document.addEventListener(
+        "error",
+        function (e) {
+          var el = e.target;
+          if (!el || el.tagName !== "IMG") return;
+          var attr = el.getAttribute("src") || "";
+          if (!el.dataset.publicFallback && attr.indexOf("./images/") === 0) {
+            el.dataset.publicFallback = "1";
+            window.__PRODDIGI_USE_PUBLIC_IMAGES__ = true;
+            el.src = "./public" + attr.slice(1);
+          }
+        },
+        true
+      );
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -47,8 +63,10 @@
 
         /* Motion */
         --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-cinema: cubic-bezier(0.22, 1, 0.36, 1);
         --duration-fast: 180ms;
-        --duration-fade: 520ms;
+        --duration-fade: 680ms;
+        --duration-reveal: 820ms;
         --duration-media: 480ms;
 
         color-scheme: dark;
@@ -198,6 +216,7 @@
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
         border-bottom: 1px solid var(--border);
+        animation: headerMount 640ms var(--ease-cinema) both;
         transition: background-color var(--duration-fast) var(--ease-out),
           border-color var(--duration-fast) var(--ease-out);
 
@@ -456,21 +475,10 @@
         padding-block: var(--section-space);
         border-bottom: 1px solid var(--border);
         scroll-margin-top: var(--header-height);
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity var(--duration-fade) var(--ease-out),
-          transform var(--duration-fade) var(--ease-out);
-
-        &.is-visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
       }
 
       main > section:first-child {
         padding-top: 0;
-        opacity: 1;
-        transform: none;
       }
 
       main > section:last-child {
@@ -513,17 +521,52 @@
         }
       }
 
-      /* Subtle Scroll Reveal (compositor-only opacity + transform) */
+      /* Subtle Cinema Mount & Scroll Reveal (compositor-only opacity + transform) */
+      @keyframes headerMount {
+        from {
+          opacity: 0;
+          transform: translate3d(0, -8px, 0);
+        }
+        to {
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+      }
+
+      @keyframes heroPosterMount {
+        from {
+          opacity: 0;
+          transform: scale(1.075);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes heroRiseIn {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 22px, 0);
+        }
+        to {
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+      }
+
       .reveal-item {
         opacity: 0;
-        transform: translateY(14px);
-        transition: opacity 540ms var(--ease-out) var(--reveal-delay, 0ms),
-          transform 540ms var(--ease-out) var(--reveal-delay, 0ms);
+        transform: translate3d(0, 26px, 0);
+        transition: opacity var(--duration-reveal) var(--ease-cinema) var(--reveal-delay, 0ms),
+          transform var(--duration-reveal) var(--ease-cinema) var(--reveal-delay, 0ms);
+        will-change: opacity, transform;
       }
 
       .reveal-item.is-revealed {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
+        will-change: auto;
       }
 
       /* ==========================================================================
@@ -540,15 +583,22 @@
         flex-direction: column;
         justify-content: flex-end;
 
-        & img.hero-poster {
+        & .hero-poster-wrap {
           position: absolute;
           inset: 0;
+          z-index: 0;
+          transform: translate3d(0, var(--hero-parallax, 0px), 0);
+          will-change: transform;
+        }
+
+        & img.hero-poster {
           width: 100%;
           height: 100%;
           object-fit: cover;
           object-position: center;
           filter: contrast(1.04) saturate(1.04);
-          z-index: 0;
+          animation: heroPosterMount 1500ms var(--ease-cinema) both;
+          will-change: opacity, transform;
         }
 
         & .hero-scrim {
@@ -585,12 +635,14 @@
             line-height: 1.04;
             color: #f4f4f5;
             text-wrap: balance;
+            animation: heroRiseIn 820ms var(--ease-cinema) 120ms both;
           }
 
           & .hero-aside {
             display: flex;
             flex-direction: column;
             gap: 0.9rem;
+            animation: heroRiseIn 820ms var(--ease-cinema) 240ms both;
 
             & p {
               font-size: var(--text-lg);
@@ -616,6 +668,7 @@
           gap: 1rem;
           padding-top: 1.25rem;
           border-top: 1px solid rgba(255, 255, 255, 0.16);
+          animation: heroRiseIn 820ms var(--ease-cinema) 360ms both;
         }
 
         /* Discreet Cinema Trigger Button */
@@ -733,13 +786,18 @@
 
           &:hover .card-media img,
           &:focus-visible .card-media img {
-            transform: scale(1.03);
+            transform: scale(1.035);
+            transition: transform var(--duration-media) var(--ease-out);
           }
 
           &:hover .card-play-badge,
           &:focus-visible .card-play-badge {
             opacity: 1;
           }
+        }
+
+        &.is-revealed .card-media img {
+          transform: scale(1);
         }
 
         & figure {
@@ -760,7 +818,8 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform var(--duration-media) var(--ease-out);
+            transform: scale(1.065);
+            transition: transform 1100ms var(--ease-cinema) var(--reveal-delay, 0ms);
           }
 
           & .card-play-badge {
@@ -907,7 +966,7 @@
         }
 
         & figure {
-          --reveal-delay: 80ms;
+          --reveal-delay: 120ms;
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
@@ -924,8 +983,8 @@
               width: 100%;
               height: 100%;
               object-fit: cover;
-              transform: scale(1.03);
-              transition: transform 900ms var(--ease-out);
+              transform: scale(1.065);
+              transition: transform 1150ms var(--ease-cinema) 120ms;
             }
           }
 
@@ -1033,7 +1092,7 @@
       }
 
       form.contact-form {
-        --reveal-delay: 80ms;
+        --reveal-delay: 120ms;
         background-color: var(--surface);
         border: 1px solid var(--border);
         padding: clamp(1.5rem, 3vw, 2.5rem);
@@ -1360,11 +1419,19 @@
           scroll-behavior: auto;
         }
 
+        header,
+        .hero-poster-wrap,
+        img.hero-poster,
+        .hero-copy h1,
+        .hero-aside,
+        .hero-actions,
         main > section,
         .reveal-item,
+        article.project-card .card-media img,
         .studio-split figure .studio-image-wrap img {
           opacity: 1;
           transform: none;
+          animation: none;
         }
 
         *,
@@ -1471,13 +1538,15 @@
       <!-- 1. FULL-WIDTH HERO SHOWREEL (Sample Still + Overlaid Copy) -->
       <section id="inici" class="is-visible" aria-labelledby="hero-heading">
         <div class="hero-stage">
-          <img
-            id="hero-poster"
-            class="hero-poster"
-            src="./images/vimeo/100886157.jpg"
-            alt="Fotograma de producció de Proddigi a Barcelona"
-            referrerpolicy="no-referrer"
-          />
+          <div class="hero-poster-wrap" id="hero-poster-wrap">
+            <img
+              id="hero-poster"
+              class="hero-poster"
+              src="./images/vimeo/100886157.jpg"
+              alt="Fotograma de producció de Proddigi a Barcelona"
+              referrerpolicy="no-referrer"
+            />
+          </div>
           <div class="hero-scrim" aria-hidden="true"></div>
 
           <div class="hero-overlay">
@@ -2493,6 +2562,25 @@
         });
       }
 
+      function resolveImageSrc(src) {
+        if (typeof src !== "string") return src;
+        if (window.__PRODDIGI_USE_PUBLIC_IMAGES__ && src.startsWith("./images/")) {
+          return `./public${src.slice(1)}`;
+        }
+        return src;
+      }
+
+      function sweepBrokenImages() {
+        document.querySelectorAll("img").forEach((img) => {
+          const attr = img.getAttribute("src") || "";
+          if (img.complete && img.naturalWidth === 0 && !img.dataset.publicFallback && attr.startsWith("./images/")) {
+            img.dataset.publicFallback = "1";
+            window.__PRODDIGI_USE_PUBLIC_IMAGES__ = true;
+            img.src = `./public${attr.slice(1)}`;
+          }
+        });
+      }
+
       function renderPortfolio() {
         const t = getT();
         portfolioGrid.innerHTML = "";
@@ -2526,7 +2614,7 @@
 
           const article = document.createElement("article");
           article.className = "project-card";
-          article.style.setProperty("--reveal-delay", `${(idx % 2) * 70}ms`);
+          article.style.setProperty("--reveal-delay", `${(idx % 2) * 110}ms`);
 
           const btn = document.createElement("button");
           btn.type = "button";
@@ -2539,11 +2627,18 @@
           media.className = "card-media";
 
           const img = document.createElement("img");
-          img.src = project.thumbnail || project.vimeoThumbnail;
+          img.src = resolveImageSrc(project.thumbnail || project.vimeoThumbnail);
           img.alt = `${titleText} — ${project.client}`;
           img.loading = "lazy";
           img.referrerPolicy = "no-referrer";
           img.addEventListener("error", () => {
+            const currentAttr = img.getAttribute("src") || "";
+            if (!img.dataset.publicFallback && currentAttr.startsWith("./images/")) {
+              img.dataset.publicFallback = "1";
+              window.__PRODDIGI_USE_PUBLIC_IMAGES__ = true;
+              img.src = `./public${currentAttr.slice(1)}`;
+              return;
+            }
             if (project.vimeoThumbnail && img.src !== project.vimeoThumbnail) {
               img.src = project.vimeoThumbnail;
             }
@@ -2587,7 +2682,7 @@
         PRODDIGI_CMS.services.forEach((svc, serviceIndex) => {
           const article = document.createElement("article");
           article.className = "service-item";
-          article.style.setProperty("--reveal-delay", `${serviceIndex * 65}ms`);
+          article.style.setProperty("--reveal-delay", `${serviceIndex * 85}ms`);
 
           const idx = document.createElement("span");
           idx.className = "service-index";
@@ -2809,17 +2904,31 @@
       }
 
       let itemRevealObserver = null;
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
       function registerRevealTargets(root = document) {
         const targets = root.querySelectorAll(
-          "#portafoli .section-header, #serveis .section-header, #estudi .section-header, #contacte .section-header, article.project-card, article.service-item, .studio-content, .studio-split figure, .contact-details, form.contact-form"
+          "#portafoli .section-header, #portafoli .filter-bar, #serveis .section-header, #estudi .section-header, #contacte .section-header, article.project-card, article.service-item, .studio-content, .studio-metrics > div, .studio-split figure, .contact-details, form.contact-form, footer .footer-inner"
         );
+        const filterBarEl = root.querySelector?.("#portafoli .filter-bar");
+        if (filterBarEl) filterBarEl.style.setProperty("--reveal-delay", "90ms");
+        root.querySelectorAll?.(".studio-metrics > div").forEach((el, i) => {
+          el.style.setProperty("--reveal-delay", `${i * 85}ms`);
+        });
+
         targets.forEach((el) => {
           el.classList.add("reveal-item");
-          if (itemRevealObserver) {
-            itemRevealObserver.observe(el);
-          } else {
+          if (prefersReducedMotion.matches || !itemRevealObserver) {
             el.classList.add("is-revealed");
+            return;
+          }
+          const rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => el.classList.add("is-revealed"));
+            });
+          } else {
+            itemRevealObserver.observe(el);
           }
         });
       }
@@ -2827,6 +2936,8 @@
       function initNavigationAndTransitions() {
         const sections = Array.from(document.querySelectorAll("main > section[id]"));
         const navLinks = document.querySelectorAll("header nav a, #mobile-nav a");
+        const heroStage = document.querySelector(".hero-stage");
+        const heroPosterWrap = document.getElementById("hero-poster-wrap");
 
         const setActiveLink = (id) => {
           state.activeSection = id;
@@ -2840,20 +2951,7 @@
           });
         };
 
-        // 1) Compositor-only smooth section & element scroll reveal
-        const revealObserver = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting) {
-                entry.target.classList.add("is-visible");
-              }
-            });
-          },
-          { threshold: 0.05, rootMargin: "0px 0px -6% 0px" }
-        );
-
-        sections.forEach((sec) => revealObserver.observe(sec));
-
+        // 1) Compositor-only smooth cinema scroll reveal
         itemRevealObserver = new IntersectionObserver(
           (entries, obs) => {
             entries.forEach((entry) => {
@@ -2863,12 +2961,19 @@
               }
             });
           },
-          { threshold: 0.08, rootMargin: "0px 0px -6% 0px" }
+          { threshold: 0.1, rootMargin: "0px 0px -8% 0px" }
         );
 
         registerRevealTargets(document);
 
-        // 2) Geometry-accurate Scrollspy locked cleanly during smooth scroll transitions
+        // 2) Geometry-accurate Scrollspy + subtle compositor-only hero parallax
+        const updateHeroParallax = () => {
+          if (!heroPosterWrap || !heroStage || prefersReducedMotion.matches) return;
+          const limit = heroStage.offsetHeight || 700;
+          const y = Math.min(Math.max(window.scrollY, 0), limit);
+          heroPosterWrap.style.setProperty("--hero-parallax", `${(y * 0.16).toFixed(1)}px`);
+        };
+
         const computeActiveSection = () => {
           if (state.isProgrammaticScroll) return;
 
@@ -2903,6 +3008,7 @@
           () => {
             if (!ticking) {
               requestAnimationFrame(() => {
+                updateHeroParallax();
                 computeActiveSection();
                 ticking = false;
               });
@@ -2992,6 +3098,7 @@
       /* ------------------------------------------------------------------------
          BOOT
          ------------------------------------------------------------------------ */
+      sweepBrokenImages();
       initTheme();
       initNavigationAndTransitions();
       initLanguage();
